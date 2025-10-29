@@ -163,7 +163,7 @@ const selectHasCurrentLayout = (state: LayoutState) => state.selectedLayout != u
 const selectLeftSidebarOpen = (store: WorkspaceContextStore) => store.sidebars.left.open;
 const selectRightSidebarOpen = (store: WorkspaceContextStore) => store.sidebars.right.open;
 
-export function AppBar(props: AppBarProps): React.JSX.Element {
+export function AppBar(props: AppBarProps): JSX.Element | null {
   const {
     debugDragRegion,
     isMaximized,
@@ -175,6 +175,14 @@ export function AppBar(props: AppBarProps): React.JSX.Element {
     onUnmaximizeWindow,
     showCustomWindowControls = false,
   } = props;
+
+  const isImmutable = process.env.IS_IMMUTABLE === 'true';
+  console.log(`APP BAR Config Immutable: ${isImmutable}`);
+  // If immutable this panel is null
+  if (isImmutable) {
+    return null;
+  }
+
   const { classes, cx, theme } = useStyles({ debugDragRegion });
   const { t } = useTranslation("appBar");
 

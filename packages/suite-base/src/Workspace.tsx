@@ -377,6 +377,15 @@ function WorkspaceContent(props: WorkspaceProps): React.JSX.Element {
   const showEventsTab = currentUserType !== "unauthenticated" && eventsSupported;
 
   const leftSidebarItems = useMemo(() => {
+
+    const isImmutable = process.env.IS_IMMUTABLE === 'true';
+    console.log(`InteractionsBaseComponent Config Immutable: ${isImmutable}`);
+    const items_empty = new Map<LeftSidebarItemKey, SidebarItem>([]);
+
+    if (isImmutable) {
+      return items_empty;
+    }
+
     const items = new Map<LeftSidebarItemKey, SidebarItem>([
       ["panel-settings", { title: "Panel", component: PanelSettingsSidebar }],
       ["topics", { title: "Topics", component: TopicList }],

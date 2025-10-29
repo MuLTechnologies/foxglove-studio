@@ -60,3 +60,7 @@ export type { AppBarProps } from "./components/AppBar";
 export { IdbExtensionLoader } from "./services/extension/IdbExtensionLoader";
 export { default as BasicBuilder } from "./testing/builders/BasicBuilder";
 export { LOCAL_STORAGE_APP_CONFIGURATION } from "./constants/browserStorageKeys";
+
+// Example of directly accessing and using the environment variable
+const isImmutable = process.env.IS_IMMUTABLE; // 'IS_IMMUTABLE' is replaced directly by DefinePlugin
+console.log(`Config Immutable: ${isImmutable}`);

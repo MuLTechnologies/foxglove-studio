@@ -71,6 +71,13 @@ export default React.memo<Props>(function PanelToolbar({
     config: { [PANEL_TITLE_CONFIG_KEY]: customTitle = undefined } = {},
   } = useContext(PanelContext) ?? {};
 
+  const isImmutable = process.env.IS_IMMUTABLE === 'true';
+  console.log(`PanelToolbar Config Immutable: ${isImmutable}`);
+  // If immutable this panel is null
+  if (isImmutable) {
+    return null;
+  }
+
   const panelContext = useContext(PanelContext);
 
   // Help-shown state must be hoisted outside the controls container so the modal can remain visible
