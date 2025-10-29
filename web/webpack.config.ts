@@ -23,17 +23,14 @@ const params: ConfigParams = {
   version: packageJson.version,
 };
 
+// Define the build arg plugin IS_IMMUTABLE designe to allow for building a immutable version of foxglove
 const defineEnvVars = new DefinePlugin({
   'process.env.IS_IMMUTABLE': JSON.stringify(process.env.IS_IMMUTABLE)
 });
 
-// Set the build arg IS_IMMUTABLE
 function getConfigurations(env: unknown, argv: any): [Configuration, Configuration] {
-  // Obtain the configurations from the imported functions
   const devServerCfg: Configuration = devServerConfig(params);
   const mainCfg: Configuration = mainConfig(params)(env, argv);
-
-  // Ensure plugins arrays are properly initialized
   devServerCfg.plugins = (devServerCfg.plugins || []).concat(defineEnvVars);
   mainCfg.plugins = (mainCfg.plugins || []).concat(defineEnvVars);
 
