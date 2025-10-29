@@ -57,8 +57,7 @@ const InteractionsBaseComponent = React.memo<Props>(function InteractionsBaseCom
   timezone,
 }: Props) {
   const isImmutable = process.env.IS_IMMUTABLE === 'true';
-  console.log(`InteractionsBaseComponent Config Immutable: ${isImmutable}`);
-
+  // If immutable this panel is null
   if (isImmutable) {
     return null;
   }

@@ -177,7 +177,6 @@ export function AppBar(props: AppBarProps): JSX.Element | null {
   } = props;
 
   const isImmutable = process.env.IS_IMMUTABLE === 'true';
-  console.log(`APP BAR Config Immutable: ${isImmutable}`);
   // If immutable this panel is null
   if (isImmutable) {
     return null;

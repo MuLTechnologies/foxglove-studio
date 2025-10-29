@@ -125,8 +125,7 @@ export function RendererOverlay(props: Props): JSX.Element | null {
   });
 
   const isImmutable = process.env.IS_IMMUTABLE === 'true';
-  console.log(`RendererOverlay Config Immutable: ${isImmutable}`);
-
+  // If immutable this panel is null
   if (isImmutable) {
     return null;
   }

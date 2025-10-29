@@ -72,7 +72,6 @@ export default React.memo<Props>(function PanelToolbar({
   } = useContext(PanelContext) ?? {};
 
   const isImmutable = process.env.IS_IMMUTABLE === 'true';
-  console.log(`PanelToolbar Config Immutable: ${isImmutable}`);
   // If immutable this panel is null
   if (isImmutable) {
     return null;
