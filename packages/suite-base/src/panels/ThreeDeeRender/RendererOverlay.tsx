@@ -195,22 +195,22 @@ export function RendererOverlay(props: Props): JSX.Element | null {
     () =>
       selectedRenderable
         ? {
-          object: {
-            pose: selectedRenderable.renderable.pose,
-            interactionData: {
-              topic: selectedRenderable.renderable.topic,
-              highlighted: true,
-              originalMessage: selectedRenderable.renderable.details(),
-              instanceDetails:
-                selectedRenderable.instanceIndex != undefined
-                  ? selectedRenderable.renderable.instanceDetails(
-                    selectedRenderable.instanceIndex,
-                  )
-                  : undefined,
+            object: {
+              pose: selectedRenderable.renderable.pose,
+              interactionData: {
+                topic: selectedRenderable.renderable.topic,
+                highlighted: true,
+                originalMessage: selectedRenderable.renderable.details(),
+                instanceDetails:
+                  selectedRenderable.instanceIndex != undefined
+                    ? selectedRenderable.renderable.instanceDetails(
+                        selectedRenderable.instanceIndex,
+                      )
+                    : undefined,
+              },
             },
-          },
-          instanceIndex: selectedRenderable.instanceIndex,
-        }
+            instanceIndex: selectedRenderable.instanceIndex,
+          }
         : undefined,
     [selectedRenderable],
   );
