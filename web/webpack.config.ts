@@ -6,13 +6,13 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/
 
 import path from "path";
+import { Configuration, DefinePlugin } from 'webpack';
 
 import {
   ConfigParams,
   devServerConfig,
   mainConfig,
 } from "@lichtblick/suite-web/src/webpackConfigs";
-
 import packageJson from "../package.json";
 
 const params: ConfigParams = {
@@ -23,5 +23,18 @@ const params: ConfigParams = {
   version: packageJson.version,
 };
 
-// foxglove-depcheck-used: webpack-dev-server
-export default [devServerConfig(params), mainConfig(params)];
+// Define the build arg plugin IS_IMMUTABLE designe to allow for building a immutable version of foxglove
+const defineEnvVars = new DefinePlugin({
+  'process.env.IS_IMMUTABLE': JSON.stringify(process.env.IS_IMMUTABLE)
+});
+
+function getConfigurations(env: unknown, argv: any): [Configuration, Configuration] {
+  const devServerCfg: Configuration = devServerConfig(params);
+  const mainCfg: Configuration = mainConfig(params)(env, argv);
+  devServerCfg.plugins = (devServerCfg.plugins || []).concat(defineEnvVars);
+  mainCfg.plugins = (mainCfg.plugins || []).concat(defineEnvVars);
+
+  return [devServerCfg, mainCfg];
+}
+
+export default getConfigurations;

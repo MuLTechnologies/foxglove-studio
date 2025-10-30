@@ -116,13 +116,20 @@ type Props = {
 /**
  * Provides DOM overlay elements on top of the 3D scene (e.g. stats, debug GUI).
  */
-export function RendererOverlay(props: Props): React.JSX.Element {
+export function RendererOverlay(props: Props): JSX.Element | null {
   const { t } = useTranslation("threeDee");
   const { classes } = useStyles();
   const [clickedPosition, setClickedPosition] = useState<{ clientX: number; clientY: number }>({
     clientX: 0,
     clientY: 0,
   });
+
+  const isImmutable = process.env.IS_IMMUTABLE === 'true';
+  // If immutable this panel is null
+  if (isImmutable) {
+    return null;
+  }
+
   const [selectedRenderables, setSelectedRenderables] = useState<PickedRenderable[]>([]);
   const [selectedRenderable, setSelectedRenderable] = useState<PickedRenderable | undefined>(
     undefined,
