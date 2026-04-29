@@ -49,7 +49,8 @@ export async function main(getParams: () => Promise<MainParams> = async () => ({
   const isChrome = chromeVersion !== 0;
 
   const canRender = canRenderApp();
-  const banner = (
+  const isImmutable = process.env.IS_IMMUTABLE === 'true';
+  const banner = isImmutable ? null : (
     <CompatibilityBanner
       isChrome={isChrome}
       currentVersion={chromeVersion}
