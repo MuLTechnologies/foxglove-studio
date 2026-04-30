@@ -544,6 +544,13 @@ export default function Panel<
         overlayProps.highlightMode = "active";
       }
       if (quickActionsKeyPressed) {
+        const isImmutable = process.env.IS_IMMUTABLE === 'true';
+        // If immutable this panel is empty
+        if (isImmutable) {
+          overlayProps.actions = [];
+          return overlayProps;
+        }
+
         overlayProps.actions = [
           {
             key: "splitDown",
