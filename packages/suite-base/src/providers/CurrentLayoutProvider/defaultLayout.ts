@@ -15,6 +15,23 @@ const staticDefaultLayout = (globalThis as { LICHTBLICK_SUITE_DEFAULT_LAYOUT?: L
   .LICHTBLICK_SUITE_DEFAULT_LAYOUT;
 
 /**
+ * Fingerprint (FNV-1a of the JSON) of the layout injected when self-hosting, so a browser can tell
+ * when the injected layout changed since its last visit. Undefined when nothing was injected.
+ * */
+export const staticDefaultLayoutFingerprint: string | undefined = (() => {
+  if (staticDefaultLayout == undefined) {
+    return undefined;
+  }
+  const json = JSON.stringify(staticDefaultLayout) ?? "";
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < json.length; i++) {
+    hash ^= json.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16);
+})();
+
+/**
  * This is loaded when the user has no layout selected on application launch
  * to avoid presenting the user with a blank layout.
  */

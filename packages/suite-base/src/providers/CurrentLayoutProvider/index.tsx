@@ -41,13 +41,16 @@ import {
 import { useLayoutManager } from "@lichtblick/suite-base/context/LayoutManagerContext";
 import { useUserProfileStorage } from "@lichtblick/suite-base/context/UserProfileStorageContext";
 import { MAX_SUPPORTED_LAYOUT_VERSION } from "@lichtblick/suite-base/providers/CurrentLayoutProvider/constants";
-import { defaultLayout } from "@lichtblick/suite-base/providers/CurrentLayoutProvider/defaultLayout";
+import {
+  defaultLayout,
+  staticDefaultLayoutFingerprint,
+} from "@lichtblick/suite-base/providers/CurrentLayoutProvider/defaultLayout";
 import useUpdateSharedPanelState from "@lichtblick/suite-base/providers/CurrentLayoutProvider/hooks/useUpdateSharedPanelState";
 import { loadDefaultLayouts } from "@lichtblick/suite-base/providers/CurrentLayoutProvider/loadDefaultLayouts";
 import panelsReducer from "@lichtblick/suite-base/providers/CurrentLayoutProvider/reducers";
 import { AppEvent } from "@lichtblick/suite-base/services/IAnalytics";
 import { LayoutLoader } from "@lichtblick/suite-base/services/ILayoutLoader";
-import { LayoutManagerEventTypes } from "@lichtblick/suite-base/services/ILayoutManager";
+import { ILayoutManager, LayoutManagerEventTypes } from "@lichtblick/suite-base/services/ILayoutManager";
 import { PanelConfig, PlaybackConfig, UserScripts } from "@lichtblick/suite-base/types/panels";
 import { windowAppURLState } from "@lichtblick/suite-base/util/appURLState";
 import { getPanelTypeFromId } from "@lichtblick/suite-base/util/layout";
@@ -55,6 +58,57 @@ import { getPanelTypeFromId } from "@lichtblick/suite-base/util/layout";
 import { IncompatibleLayoutVersionAlert } from "./IncompatibleLayoutVersionAlert";
 
 const log = Logger.getLogger(__filename);
+
+const INJECTED_LAYOUT_FINGERPRINT_KEY = "mul.injectedDefaultLayoutFingerprint";
+
+/**
+ * A browser keeps its saved layout, so a default layout injected by the server would only reach
+ * first-time visitors. Re-apply it to the "Default" layout when it changed since this browser last
+ * applied it, and on every launch of the immutable build (whose users cannot reset it themselves).
+ * @returns the id of the layout to select, or undefined to keep the normal selection logic
+ */
+async function applyInjectedDefaultLayout(
+  layoutManager: ILayoutManager,
+): Promise<LayoutID | undefined> {
+  if (staticDefaultLayoutFingerprint == undefined) {
+    return undefined;
+  }
+  const isImmutable = process.env.IS_IMMUTABLE === "true";
+  let appliedFingerprint: string | undefined;
+  try {
+    appliedFingerprint = localStorage.getItem(INJECTED_LAYOUT_FINGERPRINT_KEY) ?? undefined;
+  } catch {
+    // Storage unavailable: treat as never applied
+  }
+  if (!isImmutable && appliedFingerprint === staticDefaultLayoutFingerprint) {
+    return undefined;
+  }
+
+  const layouts = await layoutManager.getLayouts();
+  const existing = layouts.find((l) => l.name === "Default" && l.permission === "CREATOR_WRITE");
+  let id: LayoutID;
+  if (existing) {
+    const updated = await layoutManager.updateLayout({ id: existing.id, data: defaultLayout });
+    if (updated.working != undefined) {
+      await layoutManager.overwriteLayout({ id: existing.id });
+    }
+    id = existing.id;
+  } else {
+    const newLayout = await layoutManager.saveNewLayout({
+      name: "Default",
+      data: defaultLayout,
+      permission: "CREATOR_WRITE",
+    });
+    id = newLayout.id;
+  }
+  try {
+    localStorage.setItem(INJECTED_LAYOUT_FINGERPRINT_KEY, staticDefaultLayoutFingerprint);
+  } catch {
+    // Storage unavailable: re-applied again next launch
+  }
+  log.info(`Applied injected default layout ${staticDefaultLayoutFingerprint}`);
+  return id;
+}
 
 /**
  * Concrete implementation of CurrentLayoutContext.Provider which handles
@@ -304,6 +358,12 @@ export default function CurrentLayoutProvider({
       enqueueSnackbar(t("noDefaultLayoutParameter", { layoutName: appParameters.defaultLayout }), {
         variant: "warning",
       });
+    }
+
+    const injectedLayoutId = await applyInjectedDefaultLayout(layoutManager);
+    if (injectedLayoutId) {
+      await setSelectedLayoutId(injectedLayoutId, { saveToProfile: true });
+      return;
     }
 
     // Retreive the selected layout id from the user's profile. If there's no layout specified
