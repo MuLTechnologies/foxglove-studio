@@ -29,7 +29,7 @@ import { MessageDefinition, isMsgDefEqual } from "@lichtblick/message-definition
 import CommonRosTypes from "@lichtblick/rosmsg-msgs-common";
 import { MessageWriter as Ros1MessageWriter } from "@lichtblick/rosmsg-serialization";
 import { MessageWriter as Ros2MessageWriter } from "@lichtblick/rosmsg2-serialization";
-import { fromMillis, fromNanoSec, isGreaterThan, isLessThan, Time } from "@lichtblick/rostime";
+import { fromNanoSec, isGreaterThan, isLessThan, Time } from "@lichtblick/rostime";
 import { ParameterValue } from "@lichtblick/suite";
 import { Asset } from "@lichtblick/suite-base/components/PanelExtensionAdapter";
 import PlayerAlertManager from "@lichtblick/suite-base/players/PlayerAlertManager";
@@ -113,6 +113,12 @@ export default class FoxgloveWebSocketPlayer implements Player {
   #clockTime?: Time;
   /* Flag indicating if the server publishes time messages */
   #serverPublishesTime = false;
+  /**
+   * Estimated offset (ns) of the server clock from the local wall clock, used when the server
+   * does not publish time. Without it, a viewer whose clock is behind the server's looks up
+   * transforms in the past (e.g. the robot model trails its footprint).
+   */
+  #serverClockOffsetNs?: bigint;
 
   #unresolvedSubscriptions = new Set<string>();
   #resolvedSubscriptionsByTopic = new Map<string, SubscriptionId>();
@@ -498,7 +504,9 @@ export default class FoxgloveWebSocketPlayer implements Player {
       this.#emitState();
     });
 
-    this.#client.on("message", ({ subscriptionId, data }) => {
+    this.#client.on("message", ({ subscriptionId, timestamp, data }) => {
+      this.#updateServerClockOffset(timestamp);
+
       const chanInfo = this.#resolvedSubscriptionsById.get(subscriptionId);
       if (!chanInfo) {
         const wasRecentlyCanceled = this.#recentlyCanceledSubscriptions.has(subscriptionId);
@@ -1210,7 +1218,9 @@ export default class FoxgloveWebSocketPlayer implements Player {
     // the server is connected. When the server is not connected, time stops.
     if (!this.#serverPublishesTime) {
       this.#clockTime =
-        this.#presence === PlayerPresence.PRESENT ? fromMillis(Date.now()) : this.#clockTime;
+        this.#presence === PlayerPresence.PRESENT
+          ? fromNanoSec(BigInt(Date.now()) * 1_000_000n + (this.#serverClockOffsetNs ?? 0n))
+          : this.#clockTime;
     }
 
     return this.#clockTime ?? ZERO_TIME;
@@ -1314,10 +1324,31 @@ export default class FoxgloveWebSocketPlayer implements Player {
     }
   }
 
+  /**
+   * Track the server clock from the log timestamps of incoming messages. Network and queueing
+   * delay only make the server look further behind, so the largest observed offset is the best
+   * estimate. Overestimating is harmless: lookups past the newest transform clamp to it.
+   */
+  #updateServerClockOffset(timestamp: bigint): void {
+    if (this.#serverPublishesTime) {
+      return;
+    }
+    const offsetNs = timestamp - BigInt(Date.now()) * 1_000_000n;
+    if (this.#serverClockOffsetNs == undefined) {
+      // Drop bounds computed from the uncorrected local clock
+      this.#startTime = undefined;
+      this.#endTime = undefined;
+    }
+    if (this.#serverClockOffsetNs == undefined || offsetNs > this.#serverClockOffsetNs) {
+      this.#serverClockOffsetNs = offsetNs;
+    }
+  }
+
   #resetSessionState(): void {
     this.#startTime = undefined;
     this.#endTime = undefined;
     this.#clockTime = undefined;
+    this.#serverClockOffsetNs = undefined;
     this.#topicsStats = new Map();
     this.#parsedMessages = [];
     this.#receivedBytes = 0;
